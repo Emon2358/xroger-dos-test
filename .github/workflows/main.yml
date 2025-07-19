@@ -13,10 +13,15 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install dependencies
+    - name: Install NASM dependency
+      run: sudo apt-get update && sudo apt-get install -y nasm build-essential git
+
+    - name: Clone and build d88tool
       run: |
-        sudo apt-get update
-        sudo apt-get install -y nasm d88tool
+        git clone https://github.com/mlochbaum/d88tool.git vendor/d88tool
+        cd vendor/d88tool
+        make
+        cp d88tool ../../build/d88tool
 
     - name: Assemble loader.asm
       run: |
@@ -31,14 +36,15 @@ jobs:
 
     - name: Create PC‑98 .d88 disk image
       run: |
-        d88tool -c xroger \
-                 -b build/boot.bin \
-                 -k build/kernel.bin \
-                 -o build/xroger.d88
+        chmod +x build/d88tool
+        build/d88tool -c xroger \
+                        -b build/boot.bin \
+                        -k build/kernel.bin \
+                        -o build/xroger.d88
 
     - name: Determine release tag
       id: tag
-      run: echo "::set-output name=TAG::v0.1.${GITHUB_RUN_NUMBER}"
+      run: echo "TAG=v0.1.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
     - name: Create or update GitHub Release
       id: create_release
